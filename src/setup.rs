@@ -104,7 +104,21 @@ pub fn init_dev_token(
     user_pin: &str,
 ) -> Result<(), DevSetupError> {
     let pkcs11 = Pkcs11::new(&config.shim_library_path)?;
-    pkcs11.initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK))?;
+    // The dev shim is process-global. Once any prior `Pkcs11::initialize`
+    // has marked it initialized, subsequent calls return
+    // `CKR_CRYPTOKI_ALREADY_INITIALIZED`. That's correct PKCS#11
+    // semantics for re-binding to an already-loaded module — treat it
+    // as success.
+    match pkcs11.initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK)) {
+        Ok(()) => {}
+        Err(cryptoki::error::Error::Pkcs11(
+            cryptoki::error::RvError::CryptokiAlreadyInitialized,
+            _,
+        )) => {
+            log::debug!("dev shim already initialized; reusing existing C_Initialize");
+        }
+        Err(e) => return Err(e.into()),
+    }
 
     // Already initialized? Then we're done.
     for slot in pkcs11.get_slots_with_initialized_token()? {

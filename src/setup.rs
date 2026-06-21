@@ -77,7 +77,10 @@ impl DevConfig {
 
 fn require_path(p: &Path, what: &str) -> Result<(), DevSetupError> {
     if !p.exists() {
-        return Err(DevSetupError::Path(format!("{what} {p:?} does not exist")));
+        return Err(DevSetupError::Path(format!(
+            "{what} {} does not exist",
+            p.display()
+        )));
     }
     Ok(())
 }
@@ -212,9 +215,8 @@ pub fn setup_dev_federation(
         let label_var = format!("HSM_DEV_{i}_LABEL");
         let pin_var = format!("HSM_DEV_{i}_PIN");
 
-        let label = match std::env::var(&label_var) {
-            Ok(v) => v,
-            Err(_) => break,
+        let Ok(label) = std::env::var(&label_var) else {
+            break;
         };
         let pin = std::env::var(&pin_var)
             .map_err(|_| DevSetupError::Env(format!("{pin_var} not set")))?;

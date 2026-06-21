@@ -55,10 +55,11 @@ struct Shim {
 impl Shim {
     fn load(path: &str) -> Result<Self, String> {
         let lib = unsafe { libloading::Library::new(path) }.map_err(|e| format!("dlopen: {e}"))?;
-        let entry: libloading::Symbol<CGetFunctionList> = unsafe { lib.get(b"C_GetFunctionList") }
-            .map_err(|e| format!("missing C_GetFunctionList: {e}"))?;
+        let entry: libloading::Symbol<'_, CGetFunctionList> =
+            unsafe { lib.get(b"C_GetFunctionList") }
+                .map_err(|e| format!("missing C_GetFunctionList: {e}"))?;
         let mut list: *mut CK_FUNCTION_LIST = ptr::null_mut();
-        let rv = unsafe { entry(&mut list) };
+        let rv = unsafe { entry(&raw mut list) };
         if rv != CKR_OK || list.is_null() {
             return Err(format!("C_GetFunctionList failed: 0x{rv:x}"));
         }
@@ -99,7 +100,7 @@ fn shim_advertises_dev_bip32_master_and_child_mechanisms() {
         pReserved: ptr::null_mut(),
     };
     let init = f.C_Initialize.expect("C_Initialize present");
-    let rv = unsafe { init(&mut args as *mut _ as CK_VOID_PTR) };
+    let rv = unsafe { init((&raw mut args).cast::<c_void>()) };
     if rv != CKR_OK {
         eprintln!("C_Initialize failed: 0x{rv:x}; skipping (probably missing SOFTHSM2_LIB).");
         return;
@@ -112,38 +113,34 @@ fn shim_advertises_dev_bip32_master_and_child_mechanisms() {
 
     let get_slot_list = f.C_GetSlotList.expect("C_GetSlotList present");
     let mut count: CK_ULONG = 0;
-    let rv = unsafe { get_slot_list(1, ptr::null_mut(), &mut count) };
+    let rv = unsafe { get_slot_list(1, ptr::null_mut(), &raw mut count) };
     assert_eq!(rv, CKR_OK, "C_GetSlotList(count) -> 0x{rv:x}");
     if count == 0 {
         eprintln!("no PKCS#11 slots reported; skipping.");
         return;
     }
-    let mut slots = vec![0 as CK_SLOT_ID; count as usize];
-    let rv = unsafe { get_slot_list(1, slots.as_mut_ptr(), &mut count) };
+    let mut slots = vec![CK_SLOT_ID::default(); usize::try_from(count).unwrap_or(0)];
+    let rv = unsafe { get_slot_list(1, slots.as_mut_ptr(), &raw mut count) };
     assert_eq!(rv, CKR_OK, "C_GetSlotList(slots) -> 0x{rv:x}");
     let slot = slots[0];
 
     let get_mech_list = f.C_GetMechanismList.expect("C_GetMechanismList present");
     let mut mech_count: CK_ULONG = 0;
-    let rv = unsafe { get_mech_list(slot, ptr::null_mut(), &mut mech_count) };
+    let rv = unsafe { get_mech_list(slot, ptr::null_mut(), &raw mut mech_count) };
     assert_eq!(rv, CKR_OK, "C_GetMechanismList(count) -> 0x{rv:x}");
-    let mut mechs = vec![0 as CK_MECHANISM_TYPE; mech_count as usize];
-    let rv = unsafe { get_mech_list(slot, mechs.as_mut_ptr(), &mut mech_count) };
+    let mut mechs = vec![CK_MECHANISM_TYPE::default(); usize::try_from(mech_count).unwrap_or(0)];
+    let rv = unsafe { get_mech_list(slot, mechs.as_mut_ptr(), &raw mut mech_count) };
     assert_eq!(rv, CKR_OK, "C_GetMechanismList(buf) -> 0x{rv:x}");
-    mechs.truncate(mech_count as usize);
+    mechs.truncate(usize::try_from(mech_count).unwrap_or(0));
 
-    let raw: Vec<u64> = mechs.to_vec();
+    let raw: Vec<u64> = mechs.clone();
     assert!(
         raw.contains(&CKM_DEV_BIP32_MASTER_DERIVE),
-        "shim should advertise CKM_DEV_BIP32_MASTER_DERIVE (0x{:08x}); got: {:#x?}",
-        CKM_DEV_BIP32_MASTER_DERIVE,
-        raw
+        "shim should advertise CKM_DEV_BIP32_MASTER_DERIVE (0x{CKM_DEV_BIP32_MASTER_DERIVE:08x}); got: {raw:#x?}",
     );
     assert!(
         raw.contains(&CKM_DEV_BIP32_CHILD_DERIVE),
-        "shim should advertise CKM_DEV_BIP32_CHILD_DERIVE (0x{:08x}); got: {:#x?}",
-        CKM_DEV_BIP32_CHILD_DERIVE,
-        raw
+        "shim should advertise CKM_DEV_BIP32_CHILD_DERIVE (0x{CKM_DEV_BIP32_CHILD_DERIVE:08x}); got: {raw:#x?}",
     );
 
     let get_mech_info = f.C_GetMechanismInfo.expect("C_GetMechanismInfo present");
@@ -153,7 +150,7 @@ fn shim_advertises_dev_bip32_master_and_child_mechanisms() {
             ulMaxKeySize: 0,
             flags: 0,
         };
-        let rv = unsafe { get_mech_info(slot, id as CK_MECHANISM_TYPE, &mut info) };
+        let rv = unsafe { get_mech_info(slot, id as CK_MECHANISM_TYPE, &raw mut info) };
         assert_eq!(rv, CKR_OK, "C_GetMechanismInfo(0x{id:08x}) -> 0x{rv:x}");
         assert!(
             info.flags != 0,

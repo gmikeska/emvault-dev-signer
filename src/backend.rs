@@ -65,7 +65,7 @@ impl HsmBackend for DevBackend {
         AttributeType::VendorDefined(CKA_DEV_BIP32_CHILD_INDEX)
     }
 
-    fn backend_name(&self) -> &str {
+    fn backend_name(&self) -> &'static str {
         "dev"
     }
 }

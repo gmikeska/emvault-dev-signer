@@ -63,9 +63,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let label_var = format!("HSM_DEV_{i}_LABEL");
         let so_pin_var = format!("HSM_DEV_{i}_SO_PIN");
         let pin_var = format!("HSM_DEV_{i}_PIN");
-        let label = match std::env::var(&label_var) {
-            Ok(v) => v,
-            Err(_) => break,
+        let Ok(label) = std::env::var(&label_var) else {
+            break;
         };
         let so_pin = std::env::var(&so_pin_var).unwrap_or_else(|_| "0000".to_string());
         let pin = std::env::var(&pin_var)

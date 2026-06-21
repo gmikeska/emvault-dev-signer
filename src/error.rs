@@ -13,10 +13,6 @@ pub enum DevSetupError {
     #[error("cryptoki error: {0}")]
     Cryptoki(#[from] cryptoki::error::Error),
 
-    /// Bad BIP-39 mnemonic.
-    #[error("invalid BIP-39 mnemonic: {0}")]
-    InvalidMnemonic(String),
-
     /// `.env` file load failed or a required variable was missing.
     #[error("environment configuration error: {0}")]
     Env(String),
@@ -26,7 +22,7 @@ pub enum DevSetupError {
     Path(String),
 
     /// The dev federation `.env` was structurally invalid (e.g. fewer
-    /// than two `WALLET_TEST_*_MNEMONIC` entries).
+    /// than two `HSM_DEV_*_LABEL` entries).
     #[error("dev federation misconfigured: {0}")]
     Federation(String),
 

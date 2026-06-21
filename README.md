@@ -54,21 +54,35 @@ inside `asterism-pkcs11` that could leak into a release binary.
 asterism-pkcs11 = { path = "../asterism-pkcs11" }
 asterism-core   = { path = "../asterism-core" }
 bitcoin = "0.32.10"
-bip39 = "2.1"
 cryptoki = "0.12"
-secrecy = "0.10"
 thiserror = "2"
 dotenvy = "0.15"
 ```
 
+This crate is **mnemonic-free** — there's no `bip39` or `secrecy`
+dependency. See "Where do mnemonics come from?" below.
+
 ## Modules
 
-| Module    | What it is                                                             |
-| --------- | ---------------------------------------------------------------------- |
-| `backend` | `DevBackend` and the `CKM_DEV_BIP32_*` / `CKA_DEV_BIP32_*` constants   |
-| `seed`    | BIP-39 mnemonic → 64-byte seed via `bip39::Mnemonic`                   |
+| Module    | What it is                                                                |
+| --------- | ------------------------------------------------------------------------- |
+| `backend` | `DevBackend` and the `CKM_DEV_BIP32_*` / `CKA_DEV_BIP32_*` constants      |
 | `setup`   | `DevConfig`, `init_dev_token`, `load_test_signer`, `setup_dev_federation` |
-| `error`   | `DevSetupError`                                                        |
+| `error`   | `DevSetupError`                                                           |
+
+## Where do mnemonics come from?
+
+They live in [`libasterism_dev_hsm`](../libasterism_dev_hsm/README.md).
+The shim reads `DEV_HSM_SLOT_{i}_MNEMONIC` env vars (or a TOML at
+`$DEV_HSM_CONFIG`) and converts them to seeds inside the `.so`. Asterism
+never sees a mnemonic and never feeds seed material across the PKCS#11
+ABI — the empty `&[]` seed passed to `derive_from_seed` tells the shim
+"use whatever seed you have configured for this session's slot."
+
+This keeps **all** dev-only "cheating" — software BIP-32, BIP-39
+PBKDF2, plaintext seeds in process memory — strictly behind the
+PKCS#11 ABI boundary, where it can't accidentally leak into a release
+binary that pulls in `asterism-pkcs11`.
 
 ## Bootstrap
 
@@ -79,14 +93,14 @@ cd ../libasterism_dev_hsm && cargo build --release
 
 # 2. Configure .env (committed at ../asterism-core/.env):
 PKCS11_LIB=/abs/path/to/libasterism_dev_hsm.so
-SOFTHSM2_LIB=/usr/lib/softhsm/libsofthsm2.so
-SOFTHSM2_CONF=/etc/softhsm/softhsm2.conf
+SOFTHSM2_LIB=/usr/lib/softhsm/libsofthsm2.so          # read by the shim
+SOFTHSM2_CONF=/etc/softhsm/softhsm2.conf              # read by the shim
 
 HSM_DEV_1_LABEL=asterism-hsm-1
 HSM_DEV_1_PIN=1111-1111
-WALLET_TEST_1_MNEMONIC="abandon abandon abandon ... about"
+DEV_HSM_SLOT_0_MNEMONIC="abandon abandon abandon ... about"  # read by the shim
 
-# … continue for HSM_DEV_2..N, WALLET_TEST_2..N
+# … continue for HSM_DEV_2..N, DEV_HSM_SLOT_{1..N-1}_MNEMONIC
 
 # 3. Initialize tokens (one-shot, idempotent):
 cargo run --example setup_dev_federation

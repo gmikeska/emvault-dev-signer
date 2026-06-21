@@ -14,6 +14,18 @@
 //!
 //! [`libasterism_dev_hsm.so`]: ../libasterism_dev_hsm/
 //!
+//! ## Where mnemonics live
+//!
+//! `asterism-dev-signer` is **mnemonic-free** by design. All BIP-39
+//! handling — mnemonic parsing, PBKDF2 stretching, slot/label →
+//! seed bookkeeping — lives in `libasterism_dev_hsm.so` itself. The
+//! shim reads `DEV_HSM_SLOT_{i}_MNEMONIC` env vars or a TOML config at
+//! `$DEV_HSM_CONFIG` and applies the right seed when
+//! `C_DeriveKey(CKM_DEV_BIP32_MASTER_DERIVE)` runs. From this crate's
+//! perspective, derivation is just a PKCS#11 call — same as it would
+//! be against a Utimaco or Thales HSM. See
+//! `libasterism_dev_hsm/README.md` for the seed-config schema.
+//!
 //! ## Layout
 //!
 //! - [`backend`] — the [`DevBackend`] struct and the `CKM_DEV_BIP32_*`
@@ -21,8 +33,6 @@
 //!   `libasterism_dev_hsm/src/constants.rs`; the
 //!   `tests/mechanism_ids.rs` integration test loads the shim and
 //!   verifies they agree at CI time.
-//! - [`seed`] — BIP-39 mnemonic → 64-byte seed conversion via
-//!   [`bip39::Mnemonic`].
 //! - [`setup`] — [`DevConfig`], [`init_dev_token`],
 //!   [`load_test_signer`], and [`setup_dev_federation`].
 //! - [`error`] — [`DevSetupError`].
@@ -46,7 +56,6 @@
 
 pub mod backend;
 pub mod error;
-pub mod seed;
 pub mod setup;
 
 pub use asterism_pkcs11;
@@ -57,5 +66,4 @@ pub use backend::{
     DevBackend,
 };
 pub use error::DevSetupError;
-pub use seed::{expose, mnemonic_to_seed, mnemonic_to_seed_no_passphrase};
 pub use setup::{DevConfig, init_dev_token, load_test_signer, setup_dev_federation};

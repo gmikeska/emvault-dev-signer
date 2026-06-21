@@ -2,7 +2,8 @@
 //!
 //! Reads `../asterism-core/.env` (where the dev secrets live), initializes
 //! every SoftHSM token referenced by `HSM_DEV_{i}_LABEL`, derives a
-//! `Pkcs11Signer` per `WALLET_TEST_{i}_MNEMONIC`, builds a
+//! `Pkcs11Signer` per token (the shim handles seeds internally — see
+//! `libasterism_dev_hsm/README.md`), builds a
 //! [`asterism_core::Federation`] at the configured derivation path, and
 //! prints the descriptor.
 //!
@@ -17,11 +18,11 @@
 //!
 //! ```text
 //! PKCS11_LIB=...libasterism_dev_hsm.so
-//! SOFTHSM2_LIB=...libsofthsm2.so
+//! SOFTHSM2_LIB=...libsofthsm2.so          # read by the shim
 //! HSM_DEV_1_LABEL=asterism-hsm-1
 //! HSM_DEV_1_PIN=1111-1111
-//! WALLET_TEST_1_MNEMONIC=abandon abandon ... about
-//! # … through HSM_DEV_5_*, WALLET_TEST_5_MNEMONIC for a 3-of-5
+//! DEV_HSM_SLOT_0_MNEMONIC=abandon ... about   # read by the shim
+//! # … through HSM_DEV_5_*, DEV_HSM_SLOT_4_MNEMONIC for a 3-of-5
 //! WALLET_TEST_FEDERATION_PATH=m/48'/1'/0'/2'
 //! WALLET_TEST_FEDERATION_THRESHOLD=3
 //! ```

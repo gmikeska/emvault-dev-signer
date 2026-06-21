@@ -1,16 +1,28 @@
 //! Dev/CI tooling for getting `Pkcs11Signer`s wired up against the
 //! `libasterism_dev_hsm.so` shim with as little ceremony as possible.
 //!
-//! The three entry points are:
+//! ## Mnemonics live in the shim
+//!
+//! `asterism-dev-signer` does **not** parse BIP-39, derive seeds, or
+//! pass seed material across the PKCS#11 ABI. The shim
+//! (`libasterism_dev_hsm.so`) reads `DEV_HSM_SLOT_{i}_MNEMONIC` env
+//! vars (or a TOML config at `$DEV_HSM_CONFIG`) at first
+//! `C_DeriveKey(CKM_DEV_BIP32_MASTER_DERIVE)` and substitutes the
+//! preloaded seed for the session's slot. From this crate's
+//! perspective, derivation is just a PKCS#11 call. See
+//! `libasterism_dev_hsm/README.md` for the seed-config schema.
+//!
+//! ## Entry points
 //!
 //! - [`init_dev_token`] — programmatic `pkcs11-tool --init-token`
 //!   equivalent, so tests can reset their tokens without shelling out.
-//! - [`load_test_signer`] — opens a session, converts a BIP-39 mnemonic
-//!   to a 64-byte seed, and calls
-//!   [`asterism_pkcs11::Pkcs11Signer::derive_from_seed`].
-//! - [`setup_dev_federation`] — reads the `WALLET_TEST_*_MNEMONIC`,
-//!   `HSM_DEV_*_LABEL`, and `HSM_DEV_*_PIN` triples out of `.env` and
-//!   produces a vec of fully-configured `Pkcs11Signer`s.
+//! - [`load_test_signer`] — opens a session against a token and calls
+//!   [`asterism_pkcs11::Pkcs11Signer::derive_from_seed`] with an empty
+//!   seed, letting the shim pull the right preloaded seed for the
+//!   token's slot.
+//! - [`setup_dev_federation`] — reads the `HSM_DEV_{i}_LABEL` /
+//!   `HSM_DEV_{i}_PIN` pairs out of `.env` and produces a vec of
+//!   fully-configured `Pkcs11Signer`s.
 
 use std::path::{Path, PathBuf};
 
@@ -21,65 +33,45 @@ use bitcoin::bip32::DerivationPath;
 use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::session::UserType;
 use cryptoki::types::AuthPin;
-use secrecy::ExposeSecret;
 
 use crate::backend::DevBackend;
 use crate::error::DevSetupError;
-use crate::seed::mnemonic_to_seed_no_passphrase;
 
 /// Default network for dev signers — testnet matches the SoftHSM-backed
 /// integration test suite.
 const DEFAULT_NETWORK: Network = Network::Testnet;
 
 /// Configuration for the dev HSM environment.
+///
+/// Strictly the path to `libasterism_dev_hsm.so`. SoftHSM library /
+/// config paths live in shim-side env vars (`SOFTHSM2_LIB`,
+/// `SOFTHSM2_CONF`); seed material lives in shim-side env vars
+/// (`DEV_HSM_SLOT_*_MNEMONIC`) or a TOML file (`DEV_HSM_CONFIG`).
 #[derive(Clone, Debug)]
 pub struct DevConfig {
     /// Path to `libasterism_dev_hsm.so`.
     pub shim_library_path: PathBuf,
-    /// Path to `libsofthsm2.so` (the shim reads this through
-    /// `$SOFTHSM2_LIB`).
-    pub softhsm_library_path: PathBuf,
-    /// Path to `softhsm2.conf` (the shim inherits this through
-    /// `$SOFTHSM2_CONF`).
-    pub softhsm_conf_path: PathBuf,
 }
 
 impl DevConfig {
-    /// Read paths from environment variables. Honors `PKCS11_LIB`
-    /// (preferred) and `SOFTHSM2_LIB` / `SOFTHSM2_CONF`.
+    /// Read the shim path from `PKCS11_LIB`.
     ///
     /// # Errors
     ///
-    /// Returns [`DevSetupError::Env`] if any required variable is
-    /// missing, or [`DevSetupError::Path`] if a configured path doesn't
-    /// exist.
+    /// Returns [`DevSetupError::Env`] if `PKCS11_LIB` is unset, or
+    /// [`DevSetupError::Path`] if the path doesn't exist.
     pub fn from_env() -> Result<Self, DevSetupError> {
         let shim = std::env::var("PKCS11_LIB")
             .map_err(|_| DevSetupError::Env("PKCS11_LIB not set".into()))?;
-        let softhsm = std::env::var("SOFTHSM2_LIB")
-            .map_err(|_| DevSetupError::Env("SOFTHSM2_LIB not set".into()))?;
-        let conf = std::env::var("SOFTHSM2_CONF").unwrap_or_else(|_| {
-            // `softhsm2.conf` is optional from SoftHSM's POV (it
-            // searches default locations), but we still default to the
-            // canonical path so logs / dotenvy are explicit.
-            "/etc/softhsm/softhsm2.conf".to_string()
-        });
-
         let cfg = Self {
             shim_library_path: PathBuf::from(shim),
-            softhsm_library_path: PathBuf::from(softhsm),
-            softhsm_conf_path: PathBuf::from(conf),
         };
         cfg.check_paths()?;
         Ok(cfg)
     }
 
     fn check_paths(&self) -> Result<(), DevSetupError> {
-        require_path(&self.shim_library_path, "shim_library_path")?;
-        require_path(&self.softhsm_library_path, "softhsm_library_path")?;
-        // `softhsm_conf_path` is allowed to be missing — SoftHSM will
-        // search default locations.
-        Ok(())
+        require_path(&self.shim_library_path, "shim_library_path")
     }
 }
 
@@ -149,26 +141,28 @@ pub fn init_dev_token(
     Ok(())
 }
 
-/// Open a session, derive a signer from a BIP-39 mnemonic, and return
-/// it ready for federation construction.
+/// Open a session, derive a signer at `derivation_path`, and return it
+/// ready for federation construction.
+///
+/// The shim provides seed material from its own configuration
+/// (`DEV_HSM_SLOT_{i}_MNEMONIC` or `DEV_HSM_CONFIG`). The empty `&[]`
+/// seed passed to [`Pkcs11Signer::derive_from_seed`] tells the shim
+/// "use whatever seed you have configured for this session's slot."
 ///
 /// This is the dev equivalent of a key ceremony: in production, the
-/// ceremony is a formal process involving multiple HSMs, key
-/// custodians, and ceremony scripts. Here we collapse it to one call.
+/// ceremony is a formal multi-HSM process with key custodians and
+/// scripts. Here we collapse it to one call.
 ///
 /// # Errors
 ///
-/// Returns [`DevSetupError`] for invalid mnemonics, missing tokens, or
-/// any HSM-level failure.
+/// Returns [`DevSetupError`] for missing tokens or any HSM-level
+/// failure.
 pub fn load_test_signer(
     config: &DevConfig,
     token_label: &str,
     pin: &str,
-    mnemonic: &str,
     derivation_path: &DerivationPath,
 ) -> Result<Pkcs11Signer, DevSetupError> {
-    let seed = mnemonic_to_seed_no_passphrase(mnemonic)?;
-
     let pkcs11_cfg = asterism_pkcs11::Pkcs11Config::new(
         &config.shim_library_path,
         SlotIdentifier::label(token_label),
@@ -188,17 +182,20 @@ pub fn load_test_signer(
         derivation_path,
         DEFAULT_NETWORK,
         Box::new(DevBackend),
-        seed.expose_secret().as_slice(),
+        // Empty seed: the shim will look up the preloaded seed for
+        // this session's slot from its own configuration.
+        &[],
     )?;
     Ok(signer)
 }
 
 /// Set up a complete dev federation from `.env`.
 ///
-/// Reads tuples of `WALLET_TEST_{i}_MNEMONIC`, `HSM_DEV_{i}_LABEL`, and
-/// `HSM_DEV_{i}_PIN` for `i` from 1 upwards (stopping at the first gap)
-/// and returns a vec of `Pkcs11Signer`s ready to wrap into a
-/// [`asterism_core::Federation`].
+/// Reads `HSM_DEV_{i}_LABEL` / `HSM_DEV_{i}_PIN` pairs for `i` from 1
+/// upwards (stopping at the first gap) and returns a vec of
+/// `Pkcs11Signer`s ready to wrap into a [`asterism_core::Federation`].
+/// Mnemonics are **not** read here; the shim handles seed material
+/// internally based on each token's slot id.
 ///
 /// `derivation_path` is shared across all signers — every member of a
 /// federation derives at the same path (e.g. `m/48'/1'/0'/2'`).
@@ -216,25 +213,22 @@ pub fn setup_dev_federation(
 ) -> Result<Vec<Pkcs11Signer>, DevSetupError> {
     let mut signers = Vec::new();
     for i in 1..=16 {
-        let mnemonic_var = format!("WALLET_TEST_{i}_MNEMONIC");
         let label_var = format!("HSM_DEV_{i}_LABEL");
         let pin_var = format!("HSM_DEV_{i}_PIN");
 
-        let mnemonic = match std::env::var(&mnemonic_var) {
+        let label = match std::env::var(&label_var) {
             Ok(v) => v,
             Err(_) => break,
         };
-        let label = std::env::var(&label_var)
-            .map_err(|_| DevSetupError::Env(format!("{label_var} not set")))?;
         let pin = std::env::var(&pin_var)
             .map_err(|_| DevSetupError::Env(format!("{pin_var} not set")))?;
 
-        let signer = load_test_signer(config, &label, &pin, &mnemonic, derivation_path)?;
+        let signer = load_test_signer(config, &label, &pin, derivation_path)?;
         signers.push(signer);
     }
     if signers.len() < 2 {
         return Err(DevSetupError::Federation(format!(
-            "need at least 2 WALLET_TEST_*_MNEMONIC entries, found {}",
+            "need at least 2 HSM_DEV_*_LABEL entries, found {}",
             signers.len()
         )));
     }

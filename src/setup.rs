@@ -77,9 +77,7 @@ impl DevConfig {
 
 fn require_path(p: &Path, what: &str) -> Result<(), DevSetupError> {
     if !p.exists() {
-        return Err(DevSetupError::Path(format!(
-            "{what} {p:?} does not exist"
-        )));
+        return Err(DevSetupError::Path(format!("{what} {p:?} does not exist")));
     }
     Ok(())
 }
@@ -124,9 +122,7 @@ pub fn init_dev_token(
                 .map(|init| init.contains(s))
                 .unwrap_or(false)
         })
-        .ok_or_else(|| {
-            DevSetupError::Env("no uninitialized SoftHSM slot available".into())
-        })?;
+        .ok_or_else(|| DevSetupError::Env("no uninitialized SoftHSM slot available".into()))?;
 
     let so_pin_auth = AuthPin::new(so_pin.into());
     pkcs11.init_token(slot, &so_pin_auth, label)?;

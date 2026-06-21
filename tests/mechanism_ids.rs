@@ -34,8 +34,8 @@ use asterism_dev_signer::{
     CKA_DEV_BIP32_PARENT_FINGERPRINT, CKM_DEV_BIP32_CHILD_DERIVE, CKM_DEV_BIP32_MASTER_DERIVE,
 };
 use cryptoki_sys::{
-    CKR_OK, CK_C_INITIALIZE_ARGS, CK_FLAGS, CK_FUNCTION_LIST, CK_MECHANISM_INFO, CK_MECHANISM_TYPE,
-    CK_RV, CK_SLOT_ID, CK_ULONG, CK_VOID_PTR,
+    CK_C_INITIALIZE_ARGS, CK_FLAGS, CK_FUNCTION_LIST, CK_MECHANISM_INFO, CK_MECHANISM_TYPE, CK_RV,
+    CK_SLOT_ID, CK_ULONG, CK_VOID_PTR, CKR_OK,
 };
 
 const CKF_OS_LOCKING_OK: CK_FLAGS = 0x0000_0002;
@@ -54,11 +54,9 @@ struct Shim {
 
 impl Shim {
     fn load(path: &str) -> Result<Self, String> {
-        let lib =
-            unsafe { libloading::Library::new(path) }.map_err(|e| format!("dlopen: {e}"))?;
-        let entry: libloading::Symbol<CGetFunctionList> =
-            unsafe { lib.get(b"C_GetFunctionList") }
-                .map_err(|e| format!("missing C_GetFunctionList: {e}"))?;
+        let lib = unsafe { libloading::Library::new(path) }.map_err(|e| format!("dlopen: {e}"))?;
+        let entry: libloading::Symbol<CGetFunctionList> = unsafe { lib.get(b"C_GetFunctionList") }
+            .map_err(|e| format!("missing C_GetFunctionList: {e}"))?;
         let mut list: *mut CK_FUNCTION_LIST = ptr::null_mut();
         let rv = unsafe { entry(&mut list) };
         if rv != CKR_OK || list.is_null() {
@@ -156,10 +154,7 @@ fn shim_advertises_dev_bip32_master_and_child_mechanisms() {
             flags: 0,
         };
         let rv = unsafe { get_mech_info(slot, id as CK_MECHANISM_TYPE, &mut info) };
-        assert_eq!(
-            rv, CKR_OK,
-            "C_GetMechanismInfo(0x{id:08x}) -> 0x{rv:x}"
-        );
+        assert_eq!(rv, CKR_OK, "C_GetMechanismInfo(0x{id:08x}) -> 0x{rv:x}");
         assert!(
             info.flags != 0,
             "C_GetMechanismInfo(0x{id:08x}) returned zero flags",

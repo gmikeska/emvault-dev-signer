@@ -1,0 +1,36 @@
+//! Error types for `asterism-dev-signer`.
+
+/// Errors raised by dev-tooling helpers (`init_dev_token`,
+/// `load_test_signer`, `setup_dev_federation`).
+#[derive(Debug, thiserror::Error)]
+pub enum DevSetupError {
+    /// PKCS#11-level failure surfaced from [`asterism_pkcs11`].
+    #[error("PKCS#11 error: {0}")]
+    Pkcs11(#[from] asterism_pkcs11::Pkcs11Error),
+
+    /// `cryptoki` error surfaced from a direct call (token init, slot
+    /// listing, etc.).
+    #[error("cryptoki error: {0}")]
+    Cryptoki(#[from] cryptoki::error::Error),
+
+    /// Bad BIP-39 mnemonic.
+    #[error("invalid BIP-39 mnemonic: {0}")]
+    InvalidMnemonic(String),
+
+    /// `.env` file load failed or a required variable was missing.
+    #[error("environment configuration error: {0}")]
+    Env(String),
+
+    /// Filesystem path didn't exist or wasn't readable.
+    #[error("path missing or unreadable: {0}")]
+    Path(String),
+
+    /// The dev federation `.env` was structurally invalid (e.g. fewer
+    /// than two `WALLET_TEST_*_MNEMONIC` entries).
+    #[error("dev federation misconfigured: {0}")]
+    Federation(String),
+
+    /// I/O error while reading config files.
+    #[error("io error: {0}")]
+    Io(#[from] std::io::Error),
+}

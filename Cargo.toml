@@ -3,6 +3,7 @@ name = "asterism-dev-signer"
 version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/gmikeska/asterism-dev-signer"
 publish = false
 description = "Dev/CI HsmBackend implementation that pairs with libasterism_dev_hsm.so."
 

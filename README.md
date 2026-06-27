@@ -1,9 +1,10 @@
 # asterism-dev-signer
 
-> Dev/CI [`HsmBackend`](../asterism-pkcs11/src/backend/mod.rs) implementation
-> for [`libasterism_dev_hsm.so`](../libasterism_dev_hsm/), plus the small
-> amount of tooling that turns a fresh checkout into a working 3-of-5
-> signer set.
+> Dev/CI [`HsmBackend`](https://github.com/gmikeska/asterism-pkcs11)
+> implementation for
+> [`libasterism_dev_hsm.so`](https://github.com/gmikeska/libasterism_dev_hsm),
+> plus the small amount of tooling that turns a fresh checkout into a working
+> 3-of-5 signer set.
 
 ## Why this crate exists
 
@@ -13,7 +14,8 @@ PKCS#11 mechanism IDs onto BIP-32 master/child derivation. To run
 identically against a SoftHSM 2 development setup, we'd need a "vendor"
 that means "software BIP-32 + SoftHSM 2."
 
-That vendor is the [`libasterism_dev_hsm.so`](../libasterism_dev_hsm/)
+That vendor is the
+[`libasterism_dev_hsm.so`](https://github.com/gmikeska/libasterism_dev_hsm)
 shim. The matching `HsmBackend` impl is `DevBackend` in this crate.
 
 By keeping `DevBackend` in a **separate crate** outside the production
@@ -72,7 +74,7 @@ dependency. See "Where do mnemonics come from?" below.
 
 ## Where do mnemonics come from?
 
-They live in [`libasterism_dev_hsm`](../libasterism_dev_hsm/README.md).
+They live in [`libasterism_dev_hsm`](https://github.com/gmikeska/libasterism_dev_hsm).
 The shim reads `DEV_HSM_SLOT_{i}_MNEMONIC` env vars (or a TOML at
 `$DEV_HSM_CONFIG`) and converts them to seeds inside the `.so`. Asterism
 never sees a mnemonic and never feeds seed material across the PKCS#11

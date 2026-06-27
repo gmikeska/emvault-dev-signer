@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/gmikeska/asterism-dev-signer"
-publish = false
 description = "Dev/CI HsmBackend implementation that pairs with libasterism_dev_hsm.so."
 
 [lib]
@@ -12,8 +11,8 @@ name = "asterism_dev_signer"
 path = "src/lib.rs"
 
 [dependencies]
-asterism-pkcs11 = { path = "../asterism-pkcs11" }
-asterism-core = { path = "../asterism-core" }
+asterism-pkcs11 = { version = "0.1.0", path = "../asterism-pkcs11" }
+asterism-core = { version = "0.1.0", path = "../asterism-core" }
 bitcoin = "0.32.10"
 cryptoki = "0.12"
 hex = "0.4"

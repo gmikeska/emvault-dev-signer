@@ -1,22 +1,22 @@
 //! [`DevBackend`] — `HsmBackend` implementation for the
-//! `libasterism_dev_hsm.so` PKCS#11 shim.
+//! `libemvault_dev_hsm.so` PKCS#11 shim.
 //!
 //! Knows the mechanism IDs and attribute IDs that the dev shim
 //! registers. These are the shim's own vendor-defined IDs — it does not
 //! pretend to be Utimaco or Thales. The shim is its own "vendor" for
 //! the purposes of PKCS#11 mechanism registration.
 
-use asterism_pkcs11::HsmBackend;
+use emvault_pkcs11::HsmBackend;
 use cryptoki::mechanism::MechanismType;
 use cryptoki::object::AttributeType;
 
 /// Master-derivation mechanism ID. Mirrors
-/// `libasterism_dev_hsm/src/constants.rs::CKM_DEV_BIP32_MASTER_DERIVE`.
+/// `libemvault_dev_hsm/src/constants.rs::CKM_DEV_BIP32_MASTER_DERIVE`.
 /// The `mechanism_ids.rs` integration test asserts the values agree at
 /// CI time.
 pub const CKM_DEV_BIP32_MASTER_DERIVE: u64 = 0x8000_D001;
 /// Child-derivation mechanism ID. Mirrors
-/// `libasterism_dev_hsm/src/constants.rs::CKM_DEV_BIP32_CHILD_DERIVE`.
+/// `libemvault_dev_hsm/src/constants.rs::CKM_DEV_BIP32_CHILD_DERIVE`.
 pub const CKM_DEV_BIP32_CHILD_DERIVE: u64 = 0x8000_D002;
 /// Vendor attribute: 32-byte BIP-32 chain code.
 pub const CKA_DEV_BIP32_CHAIN_CODE: u64 = 0x8000_D101;
@@ -28,7 +28,7 @@ pub const CKA_DEV_BIP32_PARENT_FINGERPRINT: u64 = 0x8000_D103;
 pub const CKA_DEV_BIP32_CHILD_INDEX: u64 = 0x8000_D104;
 
 /// `HsmBackend` implementation for the dev shim
-/// (`libasterism_dev_hsm.so`).
+/// (`libemvault_dev_hsm.so`).
 ///
 /// All trait method bodies inherit from `HsmBackend`'s default
 /// implementations; `DevBackend` only supplies the vendor-defined

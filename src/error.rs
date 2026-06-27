@@ -1,12 +1,12 @@
-//! Error types for `asterism-dev-signer`.
+//! Error types for `emvault-dev-signer`.
 
 /// Errors raised by dev-tooling helpers (`init_dev_token`,
 /// `load_test_signer`, `setup_dev_federation`).
 #[derive(Debug, thiserror::Error)]
 pub enum DevSetupError {
-    /// PKCS#11-level failure surfaced from [`asterism_pkcs11`].
+    /// PKCS#11-level failure surfaced from [`emvault_pkcs11`].
     #[error("PKCS#11 error: {0}")]
-    Pkcs11(#[from] asterism_pkcs11::Pkcs11Error),
+    Pkcs11(#[from] emvault_pkcs11::Pkcs11Error),
 
     /// `cryptoki` error surfaced from a direct call (token init, slot
     /// listing, etc.).

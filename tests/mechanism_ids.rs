@@ -1,7 +1,7 @@
 //! Cross-check that the dev shim's PKCS#11 mechanism IDs agree with
 //! [`DevBackend`]'s constants.
 //!
-//! `DevBackend` and `libasterism_dev_hsm.so` are built from separate
+//! `DevBackend` and `libemvault_dev_hsm.so` are built from separate
 //! crates. They share a contract — the vendor-defined mechanism IDs and
 //! attribute IDs — but Rust's type system can't enforce it across the
 //! crate boundary. This test loads the shim at runtime and asserts the
@@ -16,9 +16,9 @@
 //! or the shim isn't built. To run it:
 //!
 //! ```bash
-//! cd ../libasterism_dev_hsm && cargo build --release
-//! cd ../asterism-dev-signer
-//! PKCS11_LIB=$(realpath ../libasterism_dev_hsm/target/release/libasterism_dev_hsm.so) \
+//! cd ../libemvault_dev_hsm && cargo build --release
+//! cd ../emvault-dev-signer
+//! PKCS11_LIB=$(realpath ../libemvault_dev_hsm/target/release/libemvault_dev_hsm.so) \
 //!   SOFTHSM2_LIB=/usr/lib/softhsm/libsofthsm2.so \
 //!   cargo test --test mechanism_ids -- --nocapture
 //! ```
@@ -29,7 +29,7 @@ use std::ffi::c_void;
 use std::os::raw::c_uchar;
 use std::ptr;
 
-use asterism_dev_signer::{
+use emvault_dev_signer::{
     CKA_DEV_BIP32_CHAIN_CODE, CKA_DEV_BIP32_CHILD_DEPTH, CKA_DEV_BIP32_CHILD_INDEX,
     CKA_DEV_BIP32_PARENT_FINGERPRINT, CKM_DEV_BIP32_CHILD_DERIVE, CKM_DEV_BIP32_MASTER_DERIVE,
 };
@@ -43,7 +43,7 @@ const CKF_OS_LOCKING_OK: CK_FLAGS = 0x0000_0002;
 type CGetFunctionList = unsafe extern "C" fn(*mut *mut CK_FUNCTION_LIST) -> CK_RV;
 
 fn pkcs11_lib_path() -> Option<String> {
-    let _ = dotenvy::from_filename("../asterism-core/.env");
+    let _ = dotenvy::from_filename("../emvault-core/.env");
     std::env::var("PKCS11_LIB").ok()
 }
 

@@ -1,25 +1,25 @@
 //! End-to-end dev federation bootstrap.
 //!
-//! Reads `../asterism-core/.env` (where the dev secrets live), initializes
+//! Reads `../emvault-core/.env` (where the dev secrets live), initializes
 //! every SoftHSM token referenced by `HSM_DEV_{i}_LABEL`, derives a
 //! `Pkcs11Signer` per token (the shim handles seeds internally — see
-//! `libasterism_dev_hsm/README.md`), builds a
-//! [`asterism_core::Federation`] at the configured derivation path, and
+//! `libemvault_dev_hsm/README.md`), builds a
+//! [`emvault_core::Federation`] at the configured derivation path, and
 //! prints the descriptor.
 //!
 //! Run with:
 //!
 //! ```bash
-//! cd asterism-dev-signer
+//! cd emvault-dev-signer
 //! cargo run --example setup_dev_federation
 //! ```
 //!
-//! Required env (committed in `asterism-core/.env`):
+//! Required env (committed in `emvault-core/.env`):
 //!
 //! ```text
-//! PKCS11_LIB=...libasterism_dev_hsm.so
+//! PKCS11_LIB=...libemvault_dev_hsm.so
 //! SOFTHSM2_LIB=...libsofthsm2.so          # read by the shim
-//! HSM_DEV_1_LABEL=asterism-hsm-1
+//! HSM_DEV_1_LABEL=emvault-hsm-1
 //! HSM_DEV_1_PIN=1111-1111
 //! DEV_HSM_SLOT_0_MNEMONIC=abandon ... about   # read by the shim
 //! # … through HSM_DEV_5_*, DEV_HSM_SLOT_4_MNEMONIC for a 3-of-5
@@ -29,18 +29,18 @@
 
 use std::str::FromStr;
 
-use asterism_core::{Federation, NetworkType, Signer};
-use asterism_dev_signer::{DevConfig, DevSetupError, init_dev_token, setup_dev_federation};
+use emvault_core::{Federation, NetworkType, Signer};
+use emvault_dev_signer::{DevConfig, DevSetupError, init_dev_token, setup_dev_federation};
 use bitcoin::bip32::DerivationPath;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = env_logger::try_init();
 
-    // Walk up from the example's CWD looking for `asterism-core/.env`.
+    // Walk up from the example's CWD looking for `emvault-core/.env`.
     // Common dev pattern: run `cargo run --example ...` from this crate.
     for candidate in [
-        "../asterism-core/.env",
-        "../asterism/asterism-core/.env",
+        "../emvault-core/.env",
+        "../emvault/emvault-core/.env",
         ".env",
     ] {
         if dotenvy::from_filename(candidate).is_ok() {

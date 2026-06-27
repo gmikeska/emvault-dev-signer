@@ -1,23 +1,23 @@
 //! Dev/CI tooling for getting `Pkcs11Signer`s wired up against the
-//! `libasterism_dev_hsm.so` shim with as little ceremony as possible.
+//! `libemvault_dev_hsm.so` shim with as little ceremony as possible.
 //!
 //! ## Mnemonics live in the shim
 //!
-//! `asterism-dev-signer` does **not** parse BIP-39, derive seeds, or
+//! `emvault-dev-signer` does **not** parse BIP-39, derive seeds, or
 //! pass seed material across the PKCS#11 ABI. The shim
-//! (`libasterism_dev_hsm.so`) reads `DEV_HSM_SLOT_{i}_MNEMONIC` env
+//! (`libemvault_dev_hsm.so`) reads `DEV_HSM_SLOT_{i}_MNEMONIC` env
 //! vars (or a TOML config at `$DEV_HSM_CONFIG`) at first
 //! `C_DeriveKey(CKM_DEV_BIP32_MASTER_DERIVE)` and substitutes the
 //! preloaded seed for the session's slot. From this crate's
 //! perspective, derivation is just a PKCS#11 call. See
-//! `libasterism_dev_hsm/README.md` for the seed-config schema.
+//! `libemvault_dev_hsm/README.md` for the seed-config schema.
 //!
 //! ## Entry points
 //!
 //! - [`init_dev_token`] — programmatic `pkcs11-tool --init-token`
 //!   equivalent, so tests can reset their tokens without shelling out.
 //! - [`load_test_signer`] — opens a session against a token and calls
-//!   [`asterism_pkcs11::Pkcs11Signer::derive_from_seed`] with an empty
+//!   [`emvault_pkcs11::Pkcs11Signer::derive_from_seed`] with an empty
 //!   seed, letting the shim pull the right preloaded seed for the
 //!   token's slot.
 //! - [`setup_dev_federation`] — reads the `HSM_DEV_{i}_LABEL` /
@@ -26,8 +26,8 @@
 
 use std::path::{Path, PathBuf};
 
-use asterism_pkcs11::Pkcs11Signer;
-use asterism_pkcs11::config::SlotIdentifier;
+use emvault_pkcs11::Pkcs11Signer;
+use emvault_pkcs11::config::SlotIdentifier;
 use bitcoin::Network;
 use bitcoin::bip32::DerivationPath;
 use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
@@ -43,13 +43,13 @@ const DEFAULT_NETWORK: Network = Network::Testnet;
 
 /// Configuration for the dev HSM environment.
 ///
-/// Strictly the path to `libasterism_dev_hsm.so`. SoftHSM library /
+/// Strictly the path to `libemvault_dev_hsm.so`. SoftHSM library /
 /// config paths live in shim-side env vars (`SOFTHSM2_LIB`,
 /// `SOFTHSM2_CONF`); seed material lives in shim-side env vars
 /// (`DEV_HSM_SLOT_*_MNEMONIC`) or a TOML file (`DEV_HSM_CONFIG`).
 #[derive(Clone, Debug)]
 pub struct DevConfig {
-    /// Path to `libasterism_dev_hsm.so`.
+    /// Path to `libemvault_dev_hsm.so`.
     pub shim_library_path: PathBuf,
 }
 
@@ -176,14 +176,14 @@ pub fn load_test_signer(
     pin: &str,
     derivation_path: &DerivationPath,
 ) -> Result<Pkcs11Signer, DevSetupError> {
-    let pkcs11_cfg = asterism_pkcs11::Pkcs11Config::new(
+    let pkcs11_cfg = emvault_pkcs11::Pkcs11Config::new(
         &config.shim_library_path,
         SlotIdentifier::label(token_label),
         pin.to_string(),
         derivation_path.clone(),
         Box::new(DevBackend),
     );
-    let session = asterism_pkcs11::Pkcs11Session::open(
+    let session = emvault_pkcs11::Pkcs11Session::open(
         &pkcs11_cfg,
         &SlotIdentifier::label(token_label),
         pin,
@@ -206,7 +206,7 @@ pub fn load_test_signer(
 ///
 /// Reads `HSM_DEV_{i}_LABEL` / `HSM_DEV_{i}_PIN` pairs for `i` from 1
 /// upwards (stopping at the first gap) and returns a vec of
-/// `Pkcs11Signer`s ready to wrap into a [`asterism_core::Federation`].
+/// `Pkcs11Signer`s ready to wrap into a [`emvault_core::Federation`].
 /// Mnemonics are **not** read here; the shim handles seed material
 /// internally based on each token's slot id.
 ///

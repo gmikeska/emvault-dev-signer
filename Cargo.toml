@@ -1,18 +1,18 @@
 [package]
-name = "asterism-dev-signer"
+name = "emvault-dev-signer"
 version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/gmikeska/asterism-dev-signer"
-description = "Dev/CI HsmBackend implementation that pairs with libasterism_dev_hsm.so."
+repository = "https://github.com/gmikeska/emvault-dev-signer"
+description = "Dev/CI HsmBackend implementation that pairs with libemvault_dev_hsm.so."
 
 [lib]
-name = "asterism_dev_signer"
+name = "emvault_dev_signer"
 path = "src/lib.rs"
 
 [dependencies]
-asterism-pkcs11 = { version = "0.1.0", path = "../asterism-pkcs11" }
-asterism-core = { version = "0.1.0", path = "../asterism-core" }
+emvault-pkcs11 = { version = "0.1.0", path = "../emvault-pkcs11" }
+emvault-core = { version = "0.1.0", path = "../emvault-core" }
 bitcoin = "0.32.10"
 cryptoki = "0.12"
 hex = "0.4"

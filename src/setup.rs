@@ -26,13 +26,13 @@
 
 use std::path::{Path, PathBuf};
 
-use emvault_pkcs11::Pkcs11Signer;
-use emvault_pkcs11::config::SlotIdentifier;
 use bitcoin::Network;
 use bitcoin::bip32::DerivationPath;
 use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::session::UserType;
 use cryptoki::types::AuthPin;
+use emvault_pkcs11::Pkcs11Signer;
+use emvault_pkcs11::config::SlotIdentifier;
 
 use crate::backend::DevBackend;
 use crate::error::DevSetupError;
@@ -183,11 +183,8 @@ pub fn load_test_signer(
         derivation_path.clone(),
         Box::new(DevBackend),
     );
-    let session = emvault_pkcs11::Pkcs11Session::open(
-        &pkcs11_cfg,
-        &SlotIdentifier::label(token_label),
-        pin,
-    )?;
+    let session =
+        emvault_pkcs11::Pkcs11Session::open(&pkcs11_cfg, &SlotIdentifier::label(token_label), pin)?;
 
     let signer = Pkcs11Signer::derive_from_seed(
         session,

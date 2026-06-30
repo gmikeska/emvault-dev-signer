@@ -29,9 +29,9 @@
 
 use std::str::FromStr;
 
+use bitcoin::bip32::DerivationPath;
 use emvault_core::{Federation, NetworkType, Signer};
 use emvault_dev_signer::{DevConfig, DevSetupError, init_dev_token, setup_dev_federation};
-use bitcoin::bip32::DerivationPath;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = env_logger::try_init();

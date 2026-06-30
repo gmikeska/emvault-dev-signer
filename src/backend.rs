@@ -6,9 +6,9 @@
 //! pretend to be Utimaco or Thales. The shim is its own "vendor" for
 //! the purposes of PKCS#11 mechanism registration.
 
-use emvault_pkcs11::HsmBackend;
 use cryptoki::mechanism::MechanismType;
 use cryptoki::object::AttributeType;
+use emvault_pkcs11::HsmBackend;
 
 /// Master-derivation mechanism ID. Mirrors
 /// `libemvault_dev_hsm/src/constants.rs::CKM_DEV_BIP32_MASTER_DERIVE`.

@@ -6,6 +6,11 @@
 > plus the small amount of tooling that turns a fresh checkout into a working
 > 3-of-5 signer set.
 
+> ⚠️ **Dev/CI only — never ship this in production.** It drives a SoftHSM 2 +
+> software-BIP-32 setup and deals in plaintext seeds and default PINs behind
+> the PKCS#11 shim. Keep it in `[dev-dependencies]` only; it must never land in
+> a release binary.
+
 ## Why this crate exists
 
 `emvault-pkcs11` ships the `HsmBackend` trait plus production
@@ -53,12 +58,16 @@ inside `emvault-pkcs11` that could leak into a release binary.
 
 ```toml
 [dependencies]
-emvault-pkcs11 = { path = "../emvault-pkcs11" }
-emvault-core   = { path = "../emvault-core" }
+emvault-pkcs11 = { version = "0.2.0", path = "../emvault-pkcs11" }
+emvault-core   = { version = "0.2.0", path = "../emvault-core" }
 bitcoin = "0.32.10"
 cryptoki = "0.12"
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 thiserror = "2"
 dotenvy = "0.15"
+log = "0.4"
 ```
 
 This crate is **mnemonic-free** — there's no `bip39` or `secrecy`
@@ -119,7 +128,7 @@ use emvault_dev_signer::{DevConfig, setup_dev_federation};
 use bitcoin::bip32::DerivationPath;
 use std::str::FromStr;
 
-dotenvy::from_filename("../emvault/emvault-core/.env").ok();
+dotenvy::from_filename("../emvault-core/.env").ok();
 let cfg = DevConfig::from_env()?;
 let path = DerivationPath::from_str("m/48'/1'/0'/2'")?;
 let signers = setup_dev_federation(&cfg, &path)?;

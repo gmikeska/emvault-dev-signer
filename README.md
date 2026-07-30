@@ -6,6 +6,8 @@
 > plus the small amount of tooling that turns a fresh checkout into a working
 > 3-of-5 signer set.
 
+See the [CHANGELOG](https://github.com/gmikeska/emvault-dev-signer/blob/master/CHANGELOG.md) for release notes.
+
 > ⚠️ **Dev/CI only — never ship this in production.** It drives a SoftHSM 2 +
 > software-BIP-32 setup and deals in plaintext seeds and default PINs behind
 > the PKCS#11 shim. Keep it in `[dev-dependencies]` only; it must never land in

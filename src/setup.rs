@@ -136,8 +136,7 @@ pub fn init_dev_token(
         .find(|s| {
             !pkcs11
                 .get_slots_with_initialized_token()
-                .map(|init| init.contains(s))
-                .unwrap_or(false)
+                .is_ok_and(|init| init.contains(s))
         })
         .ok_or_else(|| DevSetupError::Env("no uninitialized SoftHSM slot available".into()))?;
 

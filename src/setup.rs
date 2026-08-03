@@ -37,6 +37,30 @@ use emvault_pkcs11::config::SlotIdentifier;
 use crate::backend::DevBackend;
 use crate::error::DevSetupError;
 
+/// The registry entry `("dev", registrar)` for [`emvault_pkcs11::fleet`], so the
+/// dev SoftHSM shim can co-sign in a mixed-vendor federation alongside real
+/// HSMs. Register it before [`emvault_pkcs11::Fleet::from_env`]; members with
+/// `EMVAULT_FLEET_<i>_VENDOR=dev` then get a [`DevBackend`] (the shim reads its
+/// own SoftHSM/seed config from `SOFTHSM2_LIB` / `DEV_HSM_CONFIG`).
+///
+/// ```no_run
+/// use emvault_pkcs11::BackendRegistry;
+/// let mut registry = BackendRegistry::new();
+/// let (tag, registrar) = emvault_dev_signer::dev_registrar();
+/// registry.register(tag, registrar);
+/// ```
+#[must_use]
+pub fn dev_registrar() -> (&'static str, emvault_pkcs11::fleet::BackendRegistrar) {
+    use emvault_pkcs11::HsmBackend;
+    use emvault_pkcs11::fleet::{BackendFactory, BackendRegistrar, MemberEnv};
+
+    let registrar: BackendRegistrar = Box::new(|_m: &MemberEnv| {
+        let factory: BackendFactory = Box::new(|| Box::new(DevBackend) as Box<dyn HsmBackend>);
+        Ok(factory)
+    });
+    ("dev", registrar)
+}
+
 /// Default network for dev signers — testnet matches the SoftHSM-backed
 /// integration test suite.
 const DEFAULT_NETWORK: Network = Network::Testnet;

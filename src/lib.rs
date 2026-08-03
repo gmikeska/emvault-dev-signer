@@ -66,4 +66,4 @@ pub use backend::{
     DevBackend,
 };
 pub use error::DevSetupError;
-pub use setup::{DevConfig, init_dev_token, load_test_signer, setup_dev_federation};
+pub use setup::{DevConfig, dev_registrar, init_dev_token, load_test_signer, setup_dev_federation};

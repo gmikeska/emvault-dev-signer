@@ -60,8 +60,8 @@ inside `emvault-pkcs11` that could leak into a release binary.
 
 ```toml
 [dependencies]
-emvault-pkcs11 = { version = "0.6.0", path = "../emvault-pkcs11" }
-emvault-core   = { version = "0.6.0", path = "../emvault-core" }
+emvault-pkcs11 = { version = "0.7.0", path = "../emvault-pkcs11" }
+emvault-core   = { version = "0.7.0", path = "../emvault-core" }
 bitcoin = "0.32.10"
 cryptoki = "0.12"
 hex = "0.4"

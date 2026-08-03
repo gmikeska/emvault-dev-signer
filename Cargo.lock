@@ -487,7 +487,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "emvault-core"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bdk_bitcoind_rpc",
  "bdk_wallet",
@@ -505,7 +505,7 @@ dependencies = [
 
 [[package]]
 name = "emvault-dev-signer"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bitcoin",
  "cryptoki",
@@ -524,7 +524,7 @@ dependencies = [
 
 [[package]]
 name = "emvault-pkcs11"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bdk_wallet",
  "bitcoin",

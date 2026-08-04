@@ -63,7 +63,7 @@ pub use emvault_pkcs11;
 pub use backend::{
     CKA_DEV_BIP32_CHAIN_CODE, CKA_DEV_BIP32_CHILD_DEPTH, CKA_DEV_BIP32_CHILD_INDEX,
     CKA_DEV_BIP32_PARENT_FINGERPRINT, CKM_DEV_BIP32_CHILD_DERIVE, CKM_DEV_BIP32_MASTER_DERIVE,
-    DevBackend,
+    CKM_DEV_SCHNORR_BIP340, DEV_TAPROOT_SIGNER, DevBackend, DevTaprootSigner,
 };
 pub use error::DevSetupError;
 pub use setup::{DevConfig, dev_registrar, init_dev_token, load_test_signer, setup_dev_federation};

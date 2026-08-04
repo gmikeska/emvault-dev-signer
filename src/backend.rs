@@ -6,9 +6,13 @@
 //! pretend to be Utimaco or Thales. The shim is its own "vendor" for
 //! the purposes of PKCS#11 mechanism registration.
 
-use cryptoki::mechanism::MechanismType;
-use cryptoki::object::AttributeType;
-use emvault_pkcs11::AttributeDerivation;
+use bitcoin::bip32::DerivationPath;
+use bitcoin::secp256k1::schnorr;
+use cryptoki::mechanism::vendor_defined::VendorDefinedMechanism;
+use cryptoki::mechanism::{Mechanism, MechanismType};
+use cryptoki::object::{AttributeType, ObjectHandle};
+use cryptoki::session::Session;
+use emvault_pkcs11::{AttributeDerivation, HsmBackendError, TaprootSigner};
 
 /// Master-derivation mechanism ID. Mirrors
 /// `libemvault_dev_hsm/src/constants.rs::CKM_DEV_BIP32_MASTER_DERIVE`.
@@ -18,6 +22,11 @@ pub const CKM_DEV_BIP32_MASTER_DERIVE: u64 = 0x8000_D001;
 /// Child-derivation mechanism ID. Mirrors
 /// `libemvault_dev_hsm/src/constants.rs::CKM_DEV_BIP32_CHILD_DERIVE`.
 pub const CKM_DEV_BIP32_CHILD_DERIVE: u64 = 0x8000_D002;
+/// Schnorr/BIP-340 signing mechanism ID. Mirrors
+/// `libemvault_dev_hsm/src/constants.rs::CKM_DEV_SCHNORR_BIP340`. The shim
+/// signs it in software (SoftHSM has no Schnorr); the `mechanism_ids.rs`
+/// integration test asserts the value agrees.
+pub const CKM_DEV_SCHNORR_BIP340: u64 = 0x8000_D003;
 /// Vendor attribute: 32-byte BIP-32 chain code.
 pub const CKA_DEV_BIP32_CHAIN_CODE: u64 = 0x8000_D101;
 /// Vendor attribute: 1-byte BIP-32 depth.
@@ -67,6 +76,46 @@ impl AttributeDerivation for DevBackend {
 
     fn backend_name(&self) -> &'static str {
         "dev"
+    }
+
+    /// The dev shim signs Taproot (BIP-340 Schnorr) in software behind the
+    /// PKCS#11 boundary, so `DevBackend` advertises a Taproot signer. This is
+    /// what gives a mixed-vendor federation (dev + Securosys) a working Taproot
+    /// path on both sides.
+    fn taproot_signer(&self) -> Option<&dyn TaprootSigner> {
+        Some(&DEV_TAPROOT_SIGNER)
+    }
+}
+
+/// Taproot (BIP-340 Schnorr) signer for the dev shim.
+///
+/// Signs through the shim's vendor `CKM_DEV_SCHNORR_BIP340` mechanism —
+/// `C_SignInit` + `C_Sign` over the PKCS#11 session, exactly like the ECDSA
+/// path uses `CKM_ECDSA`. The shim performs the software Schnorr. Signing is
+/// **by key handle** (script-path, untweaked leaf), so `label`/`full_path` —
+/// which the Securosys TSB transport needs to name its key — are unused here.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DevTaprootSigner;
+
+/// Shared instance wired into [`DevBackend::taproot_signer`].
+pub const DEV_TAPROOT_SIGNER: DevTaprootSigner = DevTaprootSigner;
+
+impl TaprootSigner for DevTaprootSigner {
+    fn sign_schnorr(
+        &self,
+        session: &Session,
+        key: ObjectHandle,
+        _label: &str,
+        _full_path: &DerivationPath,
+        sighash: &[u8; 32],
+    ) -> Result<schnorr::Signature, HsmBackendError> {
+        let mech_type = MechanismType::new_vendor_defined(CKM_DEV_SCHNORR_BIP340)
+            .map_err(|e| HsmBackendError::Signing(format!("vendor mechanism id: {e}")))?;
+        let mech = Mechanism::VendorDefined(VendorDefinedMechanism::new(mech_type, None::<&()>));
+        let raw = session
+            .sign(&mech, key, sighash)
+            .map_err(|e| HsmBackendError::Signing(e.to_string()))?;
+        schnorr::Signature::from_slice(&raw).map_err(|e| HsmBackendError::Signing(e.to_string()))
     }
 }
 

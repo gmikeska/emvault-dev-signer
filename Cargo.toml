@@ -30,3 +30,7 @@ libloading = "0.8"
 [[example]]
 name = "setup_dev_federation"
 path = "examples/setup_dev_federation.rs"
+
+[[example]]
+name = "dev_taproot_probe"
+path = "examples/dev_taproot_probe.rs"

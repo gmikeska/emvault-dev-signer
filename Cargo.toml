@@ -34,3 +34,7 @@ path = "examples/setup_dev_federation.rs"
 [[example]]
 name = "dev_taproot_probe"
 path = "examples/dev_taproot_probe.rs"
+
+[[example]]
+name = "dev_taproot_spend_probe"
+path = "examples/dev_taproot_spend_probe.rs"

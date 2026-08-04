@@ -204,7 +204,6 @@ pub fn load_test_signer(
         SlotIdentifier::label(token_label),
         pin.to_string(),
         derivation_path.clone(),
-        Box::new(DevBackend),
     );
     let session =
         emvault_pkcs11::Pkcs11Session::open(&pkcs11_cfg, &SlotIdentifier::label(token_label), pin)?;

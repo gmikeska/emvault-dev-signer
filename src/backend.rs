@@ -1,4 +1,4 @@
-//! [`DevBackend`] — `HsmBackend` implementation for the
+//! [`DevBackend`] — `AttributeDerivation` implementation for the
 //! `libemvault_dev_hsm.so` PKCS#11 shim.
 //!
 //! Knows the mechanism IDs and attribute IDs that the dev shim
@@ -8,7 +8,7 @@
 
 use cryptoki::mechanism::MechanismType;
 use cryptoki::object::AttributeType;
-use emvault_pkcs11::HsmBackend;
+use emvault_pkcs11::AttributeDerivation;
 
 /// Master-derivation mechanism ID. Mirrors
 /// `libemvault_dev_hsm/src/constants.rs::CKM_DEV_BIP32_MASTER_DERIVE`.
@@ -27,10 +27,10 @@ pub const CKA_DEV_BIP32_PARENT_FINGERPRINT: u64 = 0x8000_D103;
 /// Vendor attribute: 4-byte little-endian child index.
 pub const CKA_DEV_BIP32_CHILD_INDEX: u64 = 0x8000_D104;
 
-/// `HsmBackend` implementation for the dev shim
+/// `AttributeDerivation` implementation for the dev shim
 /// (`libemvault_dev_hsm.so`).
 ///
-/// All trait method bodies inherit from `HsmBackend`'s default
+/// The derive/read bodies come from the `HsmBackend` blanket impl over
 /// implementations; `DevBackend` only supplies the vendor-defined
 /// mechanism / attribute IDs. The shim defines its own seed-passing
 /// convention (the seed in `pMechanism->pParameter`) which matches the
@@ -38,7 +38,7 @@ pub const CKA_DEV_BIP32_CHILD_INDEX: u64 = 0x8000_D104;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DevBackend;
 
-impl HsmBackend for DevBackend {
+impl AttributeDerivation for DevBackend {
     fn master_derive_mechanism(&self) -> MechanismType {
         MechanismType::new_vendor_defined(CKM_DEV_BIP32_MASTER_DERIVE)
             .expect("CKM_DEV_BIP32_MASTER_DERIVE >= CKM_VENDOR_DEFINED")

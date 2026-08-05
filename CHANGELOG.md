@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > Entries for 0.5.0 and earlier were reconstructed from git history.
 
+## [0.8.0] - Unreleased
+
+### Added
+- **Dev-shim Taproot (BIP-340) signer.** `DevTaprootSigner` +
+  `DevBackend::taproot_signer` perform software Schnorr behind the PKCS#11
+  boundary via the vendor mechanism `CKM_DEV_SCHNORR_BIP340`, giving a
+  mixed-vendor federation (dev + hardware HSM) a working Taproot cosigner.
+- `dev_taproot_spend_probe` example (+ runner): a full 2-of-3
+  `tr(NUMS, multi_a)` script-path spend signed by dev SoftHSM keys, with both
+  BIP-340 signatures verified and the PSBT finalized.
+
 ## [0.7.0] - 2026-08-03
 
 ### Changed

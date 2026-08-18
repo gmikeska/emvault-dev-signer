@@ -1,6 +1,6 @@
 [package]
 name = "emvault-dev-signer"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/gmikeska/emvault-dev-signer"
@@ -11,8 +11,8 @@ name = "emvault_dev_signer"
 path = "src/lib.rs"
 
 [dependencies]
-emvault-pkcs11 = { version = "0.7.0", path = "../emvault-pkcs11" }
-emvault-core = { version = "0.7.0", path = "../emvault-core" }
+emvault-pkcs11 = { version = "0.8.0", path = "../emvault-pkcs11" }
+emvault-core = { version = "0.8.0", path = "../emvault-core" }
 bitcoin = "0.32.10"
 cryptoki = "0.12"
 hex = "0.4"

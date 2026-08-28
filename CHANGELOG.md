@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > Entries for 0.5.0 and earlier were reconstructed from git history.
 
+## [0.10.0] - 2026-08-28
+
+### Changed
+- Aligned to the suite **0.10.0**; rebuilt against `emvault-core` 0.10.0 (F1/F4/F2 security hardening). No functional changes to the dev signer.
+
 ## [0.9.0] - 2026-08-21
 
 ### Changed
